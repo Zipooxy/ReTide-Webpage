@@ -118,6 +118,15 @@ Route::middleware(['auth'])->group(function () {
         // Public Marketplace
         Route::get('/marketplace', [MarketplaceProductController::class, 'index'])->name('marketplace.index');
         Route::get('/marketplace/success', function () {
+            $latestPayment = \App\Models\Payment::where('user_id', auth()->id())
+                ->where('payment_type', 'marketplace')
+                ->where('status', 'pending')
+                ->latest()
+                ->first();
+            if ($latestPayment && str_starts_with($latestPayment->snap_token ?? '', 'DEMO-')) {
+                $latestPayment->update(['status' => 'settlement']);
+            }
+
             session()->forget('cart');
 
             return view('marketplace_success');

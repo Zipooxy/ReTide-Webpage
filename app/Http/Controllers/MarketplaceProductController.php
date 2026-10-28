@@ -39,7 +39,12 @@ class MarketplaceProductController extends Controller
 
         $imagePath = null;
         if ($request->hasFile('image_path')) {
-            $imagePath = cloudinary()->uploadApi()->upload($request->file('image_path')->getRealPath(), ['folder' => 'marketplace_products'])['secure_url'];
+            try {
+                $imagePath = cloudinary()->uploadApi()->upload($request->file('image_path')->getRealPath(), ['folder' => 'marketplace_products'])['secure_url'];
+            } catch (\Throwable $e) {
+                $path = $request->file('image_path')->store('marketplace_products', 'public');
+                $imagePath = asset('storage/'.$path);
+            }
         }
 
         MarketplaceProduct::create([
@@ -89,7 +94,12 @@ class MarketplaceProductController extends Controller
         $imagePath = $product->image_path;
 
         if ($request->hasFile('image_path')) {
-            $imagePath = cloudinary()->uploadApi()->upload($request->file('image_path')->getRealPath(), ['folder' => 'marketplace_products'])['secure_url'];
+            try {
+                $imagePath = cloudinary()->uploadApi()->upload($request->file('image_path')->getRealPath(), ['folder' => 'marketplace_products'])['secure_url'];
+            } catch (\Throwable $e) {
+                $path = $request->file('image_path')->store('marketplace_products', 'public');
+                $imagePath = asset('storage/'.$path);
+            }
         }
 
         $product->update([

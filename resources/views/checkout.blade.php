@@ -88,6 +88,16 @@
                         </div>
                     </div>
 
+                    @if(str_starts_with($snapToken, 'DEMO-') || !config('midtrans.client_key'))
+                    <div class="mb-5 p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-300 text-xs flex items-start gap-3">
+                        <i class="fas fa-flask text-amber-400 text-base mt-0.5"></i>
+                        <div>
+                            <p class="font-bold text-amber-200">Mode Simulasi Pembayaran (Demo)</p>
+                            <p class="text-gray-400 mt-0.5">Midtrans API key belum diisi. Anda dapat menguji transaksi secara instan melalui simulator.</p>
+                        </div>
+                    </div>
+                    @endif
+
                     <button type="button" id="pay-button" class="w-full bg-brand hover:bg-brandHover text-black font-bold text-lg py-4 rounded-xl transition-all duration-300 transform hover:-translate-y-1 hover:shadow-[0_4px_20px_rgba(99,207,192,0.3)] flex items-center justify-center">
                         <i class="fas fa-lock mr-2"></i> Pay Securely Now
                     </button>
@@ -99,6 +109,66 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Simulasi Pembayaran Demo -->
+<div id="demo-payment-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm hidden p-4">
+    <div class="bg-[#121212] border border-gray-800 rounded-2xl max-w-md w-full p-6 shadow-2xl animate-fade-in">
+        <div class="flex items-center justify-between border-b border-gray-800 pb-4 mb-4">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-full bg-brand/20 flex items-center justify-center text-brand">
+                    <i class="fas fa-credit-card text-sm"></i>
+                </div>
+                <h3 class="font-bold text-lg text-white">Simulasi Pembayaran (Demo)</h3>
+            </div>
+            <button type="button" onclick="closeDemoModal()" class="text-gray-400 hover:text-white transition-colors">
+                <i class="fas fa-times text-lg"></i>
+            </button>
+        </div>
+
+        <div class="space-y-4 mb-6">
+            <div class="bg-black/40 border border-gray-800 rounded-xl p-4">
+                <div class="flex justify-between text-xs text-gray-400 mb-1">
+                    <span>Order ID:</span>
+                    <span class="font-mono text-gray-300">{{ $payment->order_id }}</span>
+                </div>
+                <div class="flex justify-between text-base font-bold text-white">
+                    <span>Total Pembayaran:</span>
+                    <span class="text-brand">Rp {{ number_format($totalAmount, 0, ',', '.') }}</span>
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400">Pilih Metode Simulasi</label>
+                <div class="p-3 bg-gray-900/80 border border-brand/40 rounded-xl flex items-center justify-between text-sm">
+                    <div class="flex items-center gap-3 text-white">
+                        <i class="fas fa-qrcode text-brand text-lg"></i>
+                        <span>QRIS / GoPay / E-Wallet</span>
+                    </div>
+                    <span class="text-xs bg-brand/20 text-brand px-2 py-0.5 rounded font-bold">Terpilih</span>
+                </div>
+                <div class="p-3 bg-gray-900/40 border border-gray-800 rounded-xl flex items-center justify-between text-sm text-gray-400">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-university text-lg"></i>
+                        <span>Virtual Account (BCA / BNI / Mandiri)</span>
+                    </div>
+                </div>
+            </div>
+
+            <p class="text-xs text-gray-400 italic">
+                Klik tombol di bawah ini untuk menyelesaikan transaksi secara instan tanpa gateway nyata.
+            </p>
+        </div>
+
+        <div class="space-y-2">
+            <button type="button" onclick="confirmDemoPayment()" id="btn-demo-confirm" class="w-full bg-brand hover:bg-brandHover text-black font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2">
+                <i class="fas fa-check-circle"></i> Selesaikan Pembayaran (Simulasi)
+            </button>
+            <button type="button" onclick="closeDemoModal()" class="w-full bg-transparent hover:bg-gray-800 text-gray-400 hover:text-white py-2.5 rounded-xl transition-all text-sm font-medium">
+                Batal
+            </button>
         </div>
     </div>
 </div>
@@ -122,23 +192,53 @@
 @endsection
 
 @section('scripts')
-    <script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="{{ env('MIDTRANS_CLIENT_KEY') }}"></script>
-    <script type="text/javascript">
-        document.getElementById('pay-button').onclick = function() {
-            snap.pay('{{ $snapToken }}', {
-                onSuccess: function(result) {
+    @php
+        $isDemo = str_starts_with($snapToken, 'DEMO-') || !config('midtrans.client_key');
+    @endphp
+
+    @if(!$isDemo)
+        <script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="{{ config('midtrans.client_key') }}"></script>
+        <script type="text/javascript">
+            document.getElementById('pay-button').onclick = function() {
+                snap.pay('{{ $snapToken }}', {
+                    onSuccess: function(result) {
+                        window.location.href = '{{ route("marketplace.success") }}';
+                    },
+                    onPending: function(result) {
+                        alert('Payment is pending. Please complete your payment.');
+                    },
+                    onError: function(result) {
+                        alert('Payment failed. Please try again.');
+                    },
+                    onClose: function() {
+                        // User closed the popup without finishing payment
+                    }
+                });
+            };
+        </script>
+    @else
+        <script type="text/javascript">
+            function openDemoModal() {
+                document.getElementById('demo-payment-modal').classList.remove('hidden');
+            }
+
+            function closeDemoModal() {
+                document.getElementById('demo-payment-modal').classList.add('hidden');
+            }
+
+            function confirmDemoPayment() {
+                const btn = document.getElementById('btn-demo-confirm');
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Memproses...';
+
+                setTimeout(() => {
                     window.location.href = '{{ route("marketplace.success") }}';
-                },
-                onPending: function(result) {
-                    alert('Payment is pending. Please complete your payment.');
-                },
-                onError: function(result) {
-                    alert('Payment failed. Please try again.');
-                },
-                onClose: function() {
-                    // User closed the popup without finishing payment
-                }
-            });
-        };
-    </script>
+                }, 600);
+            }
+
+            document.getElementById('pay-button').onclick = function() {
+                openDemoModal();
+            };
+        </script>
+    @endif
 @endsection

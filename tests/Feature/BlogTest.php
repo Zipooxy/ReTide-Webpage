@@ -340,4 +340,23 @@ class BlogTest extends TestCase
         ]);
         $response->assertSessionHasErrors(['image_path']);
     }
+
+    public function test_admin_can_create_blog_post_with_fallback_when_cloudinary_fails(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $file = UploadedFile::fake()->create('local_fallback.jpg', 100, 'image/jpeg');
+
+        $response = $this->actingAs($admin)->post('/admin/blogs', [
+            'title' => 'Fallback Blog Post',
+            'content' => 'Valid content for fallback post.',
+            'image_path' => $file,
+        ]);
+
+        $response->assertRedirect(route('admin.blogs.index'));
+        $response->assertSessionHas('success', 'Blog berhasil ditambahkan!');
+
+        $post = BlogPost::where('title', 'Fallback Blog Post')->first();
+        $this->assertNotNull($post);
+        $this->assertStringContainsString('storage/blog_posts', $post->image_path);
+    }
 }

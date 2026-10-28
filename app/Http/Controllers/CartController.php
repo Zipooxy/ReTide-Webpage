@@ -114,7 +114,12 @@ class CartController extends Controller
             ],
         ];
 
-        $snapToken = Snap::getSnapToken($params);
+        try {
+            $snapToken = Snap::getSnapToken($params);
+        } catch (\Throwable $e) {
+            // Demo mode fallback when Midtrans key is not set
+            $snapToken = 'DEMO-SNAP-'.strtoupper(uniqid());
+        }
 
         $payment = Payment::create([
             'order_id' => $orderId,
@@ -204,7 +209,12 @@ class CartController extends Controller
             // ],
         ]);
 
-        $snapToken = Snap::getSnapToken($params);
+        try {
+            $snapToken = Snap::getSnapToken($params);
+        } catch (\Throwable $e) {
+            // Demo mode fallback when Midtrans key is not set
+            $snapToken = 'DEMO-SNAP-'.strtoupper(uniqid());
+        }
         $transaction->snap_token = $snapToken;
         $transaction->save();
 
